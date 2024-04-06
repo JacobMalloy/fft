@@ -15,33 +15,40 @@ where T:std::ops::Mul<Imag,Output = Imag> + Copy{
 }
 
 
-fn fft_internal(input:&mut [Imag]){
+fn fft_internal(input:&mut [Imag],factor:&[Imag]){
     assert!(input.len().count_ones()==1);
     let N = input.len();
-    if input.len() <= 8{
-        let tmp = dft(input);
-        for (to, from) in input.iter_mut().zip(tmp.into_iter()){
+    if input.len() <= 1{
+        //let tmp = dft(input);
+        //input.copy_from_slice(&tmp);
+        /*for (to, from) in input.iter_mut().zip(tmp.into_iter()){
             *to = from;
-        }
+        }*/
         
         return;
     } 
     let even:Vec<Imag> = input.iter().step_by(2).map(|x|*x).collect::<Vec<Imag>>();
     let odd:Vec<Imag> = input.iter().skip(1).step_by(2).map(|x|*x).collect::<Vec<Imag>>();
-    
+
+    input[0..N/2].copy_from_slice(&even);
+    input[N/2..N].copy_from_slice(&odd);
+   /*  
     for (to, from) in input[0..N/2].iter_mut().zip(even.into_iter()){
         *to = from;
     }
     for (to, from) in input[N/2..N].iter_mut().zip(odd.into_iter()){
         *to = from;
-    }
-    fft_internal(&mut input[0..N/2]);
-    fft_internal(&mut input[N/2..N]);
+    }*/
+    fft_internal(&mut input[0..N/2],factor);
+    fft_internal(&mut input[N/2..N],factor);
 
+    let factor_mul = factor.len()/N;
     for i in 0..N/2{
-        let even_factor = Imag::euler(-2.0*PI*(i as f64)/(N as f64));
-        let odd_factor = Imag::euler(-2.0*PI*((i + (N/2)) as f64)/(N as f64));
+        let even_factor = factor[i*factor_mul];
+        let odd_factor = factor[i*factor_mul+(factor.len()/2)];
+        //println!("{} {}",even_factor,odd_factor);
         (input[i],input[i+(N/2)]) = (input[i]+(input[i + (N/2)]*even_factor) ,input[i]+(input[i + (N/2)]*odd_factor) );
+        //println!("{} {}",input[i],input[i+(N/2)]);
     }
     
 }
@@ -50,8 +57,10 @@ fn fft_internal(input:&mut [Imag]){
 
 fn fft<T>(input:&[T])->Vec<Imag>
 where Imag:From<T>,T:Copy{
+    let N = input.len();
     let mut return_vec:Vec<Imag> = input.iter().copied().map(|x|Imag::from(x)).collect();
-    fft_internal(&mut return_vec);
+    let factor:Vec<Imag> = (0..N).map(|i|Imag::euler(-2.0*PI*((i ) as f64)/(N as f64))).collect();
+    fft_internal(&mut return_vec,&factor);
     return return_vec;
 }
 
@@ -85,6 +94,7 @@ fn main() {
     let time = std::time::Instant::now(); 
     let result = black_box(fft(&data));
     println!("{}",(time.elapsed().as_micros() as f64)/1000000.0);
+    
     
     let tmp = [-9.0,4.0,-5.0,7.0,-2.0,3.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0];
     let tmp2 = [1.0,3.0,-5.0,2.0,6.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0];
