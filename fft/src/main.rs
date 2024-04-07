@@ -32,6 +32,8 @@ fn fft_internal(input:&mut [Imag],factor:&[Imag]){
 
     input[0..N/2].copy_from_slice(&even);
     input[N/2..N].copy_from_slice(&odd);
+    drop(even);
+    drop(odd);
    /*  
     for (to, from) in input[0..N/2].iter_mut().zip(even.into_iter()){
         *to = from;
@@ -43,11 +45,11 @@ fn fft_internal(input:&mut [Imag],factor:&[Imag]){
     fft_internal(&mut input[N/2..N],factor);
 
     let factor_mul = factor.len()/N;
-    for i in 0..N/2{
-        let even_factor = factor[i*factor_mul];
-        let odd_factor = factor[i*factor_mul+(factor.len()/2)];
-        //println!("{} {}",even_factor,odd_factor);
-        (input[i],input[i+(N/2)]) = (input[i]+(input[i + (N/2)]*even_factor) ,input[i]+(input[i + (N/2)]*odd_factor) );
+    //for i in 0..N/2{
+    let s = input.split_at_mut(N/2);
+    for ((even,odd),factor) in s.0.iter_mut().zip(s.1.iter_mut()).zip(factor.iter().step_by(factor_mul)){
+        let tmp = *odd * *factor;
+        (*even,*odd) = (*even+tmp ,*even-tmp );
         //println!("{} {}",input[i],input[i+(N/2)]);
     }
     

@@ -1,5 +1,6 @@
 use std::ops::Mul;
 use std::ops::Add;
+use std::ops::Sub;
 use std::iter::Sum;
 
 
@@ -95,6 +96,7 @@ impl_mul_for_number!(i8, i16, i32, i64, i128, isize, u8, u16, u32, u64, u128, us
 
 
 impl_op!(Imag,Imag,Imag,Add,add,|s:&Imag,other:&Imag|{Imag{real:s.real+other.real,imag:s.imag+other.imag}});
+impl_op!(Imag,Imag,Imag,Sub,sub,|s:&Imag,other:&Imag|{Imag{real:s.real-other.real,imag:s.imag-other.imag}});
 impl_op!(Imag,Imag,Imag,Mul,mul,|s:&Imag,other:&Imag|Imag{real:s.real*other.real-(s.imag*other.imag),imag:(s.real*other.imag)+(s.imag*other.real)});
 
 
