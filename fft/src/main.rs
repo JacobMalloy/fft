@@ -18,13 +18,7 @@ where T:std::ops::Mul<Imag,Output = Imag> + Copy{
 fn fft_internal(input:&mut [Imag],factor:&[Imag]){
     assert!(input.len().count_ones()==1);
     let N = input.len();
-    if input.len() <= 1{
-        //let tmp = dft(input);
-        //input.copy_from_slice(&tmp);
-        /*for (to, from) in input.iter_mut().zip(tmp.into_iter()){
-            *to = from;
-        }*/
-        
+    if N <= 1{
         return;
     } 
     let even:Vec<Imag> = input.iter().step_by(2).map(|x|*x).collect::<Vec<Imag>>();
@@ -34,23 +28,18 @@ fn fft_internal(input:&mut [Imag],factor:&[Imag]){
     input[N/2..N].copy_from_slice(&odd);
     drop(even);
     drop(odd);
-   /*  
-    for (to, from) in input[0..N/2].iter_mut().zip(even.into_iter()){
-        *to = from;
-    }
-    for (to, from) in input[N/2..N].iter_mut().zip(odd.into_iter()){
-        *to = from;
-    }*/
+
     fft_internal(&mut input[0..N/2],factor);
     fft_internal(&mut input[N/2..N],factor);
 
     let factor_mul = factor.len()/N;
-    //for i in 0..N/2{
     let s = input.split_at_mut(N/2);
-    for ((even,odd),factor) in s.0.iter_mut().zip(s.1.iter_mut()).zip(factor.iter().step_by(factor_mul)){
+    let even_iter = s.0.iter_mut(); 
+    let odd_iter = s.1.iter_mut();
+    let factor_iter = factor.iter().step_by(factor_mul);
+    for ((even,odd),factor) in even_iter.zip(odd_iter).zip(factor_iter){
         let tmp = *odd * *factor;
         (*even,*odd) = (*even+tmp ,*even-tmp );
-        //println!("{} {}",input[i],input[i+(N/2)]);
     }
     
 }
