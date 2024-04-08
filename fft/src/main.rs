@@ -14,7 +14,6 @@ where T:std::ops::Mul<Imag,Output = Imag> + Copy{
     (0..len).map(|k|(1.0/(len as f64))*input.iter().copied().enumerate().map(|(n,x)|x*Imag::euler(2.0*(n as f64)*PI*(k as f64)/(len as f64))).sum::<Imag>()).collect()
 }
 
-#[inline(never)]
 fn split_even_and_odd(input:&mut [Imag]){
     let n = input.len();
 
@@ -26,7 +25,6 @@ fn split_even_and_odd(input:&mut [Imag]){
 
 }
 
-#[inline(never)]
 fn combine_step(input:&mut [Imag],factor:&[Imag]){
     let n = input.len();
     let factor_mul = factor.len()/(n/2);
