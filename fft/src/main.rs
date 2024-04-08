@@ -73,7 +73,7 @@ where Imag:From<T>,T:Copy{
 
     let mut return_vec:Vec<Imag> = input.iter().copied().map(|x|Imag::from(x)).collect();
     return_vec.extend(std::iter::repeat(Imag{real:0.0,imag:0.0}).take(new_n-n));
-    let factor:Vec<Imag> = (0..new_n/2).map(|i|Imag::euler(-2.0*PI*((i ) as f64)/(n as f64))).collect();
+    let factor:Vec<Imag> = (0..new_n/2).map(|i|Imag::euler(-2.0*PI*((i ) as f64)/(new_n as f64))).collect();
     fft_internal(&mut return_vec,&factor);
     return return_vec;
 }
