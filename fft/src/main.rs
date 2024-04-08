@@ -65,8 +65,15 @@ fn fft_internal(input:&mut [Imag],factor:&[Imag]){
 fn fft<T>(input:&[T])->Vec<Imag>
 where Imag:From<T>,T:Copy{
     let n = input.len();
+    let new_n:usize = (1 as usize)<<(usize::BITS-((n-1).leading_zeros()));
+    
+    assert!(new_n>=n);
+    assert!((new_n>>1) < n);
+    assert!(new_n.count_ones()==1);
+
     let mut return_vec:Vec<Imag> = input.iter().copied().map(|x|Imag::from(x)).collect();
-    let factor:Vec<Imag> = (0..n/2).map(|i|Imag::euler(-2.0*PI*((i ) as f64)/(n as f64))).collect();
+    return_vec.extend(std::iter::repeat(Imag{real:0.0,imag:0.0}).take(new_n-n));
+    let factor:Vec<Imag> = (0..new_n/2).map(|i|Imag::euler(-2.0*PI*((i ) as f64)/(n as f64))).collect();
     fft_internal(&mut return_vec,&factor);
     return return_vec;
 }
