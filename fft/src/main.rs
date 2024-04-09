@@ -54,10 +54,13 @@ fn fft_internal(input:&mut [Imag],factor:&mut [Imag]){
     let mut len = 2;
     while len <= n{
         //println!("factors");
-        for i in (0..len/2).rev(){
-            //input[i*2] = input[i];
-            factor[i] = Imag::euler(-2.0*PI*((i ) as f64)/(len as f64));
+        for i in (0..len/4).rev(){
+            factor[i*2] = factor[i];
             //println!("factor:{}",input[i]);
+        }
+        let mutate_iterator = factor[0..len/2].iter_mut().enumerate().skip(1);
+        for (i,change) in mutate_iterator.step_by(2){    
+            *change = Imag::euler(-2.0*PI*((i ) as f64)/(len as f64));
         }
         for i in input.chunks_exact_mut(len){
             combine_step(i, &factor[0..len/2])
