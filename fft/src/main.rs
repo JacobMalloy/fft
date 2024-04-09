@@ -8,6 +8,7 @@ where T:std::ops::Mul<Imag,Output = Imag> + Copy{
     (0..len).map(|k|input.iter().copied().enumerate().map(|(n,x)|x*Imag::euler(-2.0*(n as f64)*PI*(k as f64)/(len as f64))).sum::<Imag>()).collect()
 }
 
+#[allow(dead_code)]
 fn idft<'a,T>(input:&'a[T])->Vec<Imag>
 where T:std::ops::Mul<Imag,Output = Imag> + Copy{
     let len = input.len();
@@ -39,7 +40,7 @@ fn combine_step(input:&mut [Imag],factor:&[Imag]){
 }
 
 
-fn fft_internal(input:&mut [Imag],factor:&mut [Imag]){
+fn fft_internal<const MUL_CONST:isize>(input:&mut [Imag],factor:&mut [Imag]){
     assert!(input.len().count_ones()==1);
     let n = input.len();
 
@@ -60,7 +61,7 @@ fn fft_internal(input:&mut [Imag],factor:&mut [Imag]){
         }
         let mutate_iterator = factor[0..len/2].iter_mut().enumerate().skip(1);
         for (i,change) in mutate_iterator.step_by(2){    
-            *change = Imag::euler(-2.0*PI*((i ) as f64)/(len as f64));
+            *change = Imag::euler((MUL_CONST as f64)*PI*((i ) as f64)/(len as f64));
         }
         for i in input.chunks_exact_mut(len){
             combine_step(i, &factor[0..len/2])
@@ -84,12 +85,32 @@ where Imag:From<T>,T:Copy{
     return_vec.extend(std::iter::repeat(Imag{real:0.0,imag:0.0}).take(new_n-n));
     //let factor:Vec<Imag> = (0..new_n/2).map(|i|Imag::euler(-2.0*PI*((i ) as f64)/(new_n as f64))).collect();
     let mut factor:Vec<Imag> = std::iter::repeat(Imag{real:1.0,imag:0.0}).take(new_n/2).collect();
-    fft_internal(&mut return_vec,&mut factor);
+    fft_internal::<-2>(&mut return_vec,&mut factor);
+    return return_vec;
+}
+
+fn ifft<T>(input:&[T])->Vec<Imag>
+where Imag:From<T>,T:Copy{
+    let n = input.len();
+    let new_n:usize = (1 as usize)<<(usize::BITS-((n-1).leading_zeros()));
+    
+    assert!(new_n>=n);
+    assert!((new_n>>1) < n);
+    assert!(new_n.count_ones()==1);
+
+    let mut return_vec:Vec<Imag> = input.iter().copied().map(|x|Imag::from(x)).collect();
+    return_vec.extend(std::iter::repeat(Imag{real:0.0,imag:0.0}).take(new_n-n));
+    //let factor:Vec<Imag> = (0..new_n/2).map(|i|Imag::euler(-2.0*PI*((i ) as f64)/(new_n as f64))).collect();
+    let mut factor:Vec<Imag> = std::iter::repeat(Imag{real:1.0,imag:0.0}).take(new_n/2).collect();
+    fft_internal::<2>(&mut return_vec,&mut factor);
+    for i in return_vec.iter_mut(){
+        *i = (1.0/(n as f64))* *i;
+    }
     return return_vec;
 }
 
 fn main() {
-    let file = std::fs::File::open("../tmp2.data").unwrap();
+    let file = std::fs::File::open("../tmp.data").unwrap();
     let bufreader = std::io::BufReader::new(file);
     let data:Vec<i64> = bufreader.lines().map(|x|x.unwrap().parse::<i64>().unwrap()).collect();
     
@@ -117,7 +138,7 @@ fn main() {
     }
     */
     println!("");
-    let tmp4:Vec<Imag> = idft(&tmp3);
+    let tmp4:Vec<Imag> = ifft(&tmp3);
     for i in tmp4.iter(){
         println!("{}",i)
     }
