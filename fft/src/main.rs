@@ -27,11 +27,11 @@ fn split_even_and_odd(input:&mut [Imag]){
 
 fn combine_step(input:&mut [Imag],factor:&[Imag]){
     let n = input.len();
-    let factor_mul = factor.len()/(n/2);
+    //let factor_mul = factor.len()/(n/2);
     let s = input.split_at_mut(n/2);
     let even_iter = s.0.iter_mut(); 
     let odd_iter = s.1.iter_mut();
-    let factor_iter = factor.iter().step_by(factor_mul);
+    let factor_iter = factor.iter();
     for ((even,odd),factor) in even_iter.zip(odd_iter).zip(factor_iter){
         let tmp = *odd * *factor;
         (*even,*odd) = (*even+tmp ,*even-tmp );
@@ -39,7 +39,7 @@ fn combine_step(input:&mut [Imag],factor:&[Imag]){
 }
 
 
-fn fft_internal(input:&mut [Imag],factor:&[Imag]){
+fn fft_internal(input:&mut [Imag],factor:&mut [Imag]){
     assert!(input.len().count_ones()==1);
     let n = input.len();
 
@@ -53,8 +53,14 @@ fn fft_internal(input:&mut [Imag],factor:&[Imag]){
 
     let mut len = 2;
     while len <= n{
+        //println!("factors");
+        for i in (0..len/2).rev(){
+            //input[i*2] = input[i];
+            factor[i] = Imag::euler(-2.0*PI*((i ) as f64)/(len as f64));
+            //println!("factor:{}",input[i]);
+        }
         for i in input.chunks_exact_mut(len){
-            combine_step(i, factor)
+            combine_step(i, &factor[0..len/2])
         }
         len *= 2;
     }  
@@ -73,8 +79,9 @@ where Imag:From<T>,T:Copy{
 
     let mut return_vec:Vec<Imag> = input.iter().copied().map(|x|Imag::from(x)).collect();
     return_vec.extend(std::iter::repeat(Imag{real:0.0,imag:0.0}).take(new_n-n));
-    let factor:Vec<Imag> = (0..new_n/2).map(|i|Imag::euler(-2.0*PI*((i ) as f64)/(new_n as f64))).collect();
-    fft_internal(&mut return_vec,&factor);
+    //let factor:Vec<Imag> = (0..new_n/2).map(|i|Imag::euler(-2.0*PI*((i ) as f64)/(new_n as f64))).collect();
+    let mut factor:Vec<Imag> = std::iter::repeat(Imag{real:1.0,imag:0.0}).take(new_n/2).collect();
+    fft_internal(&mut return_vec,&mut factor);
     return return_vec;
 }
 
