@@ -49,34 +49,37 @@ fn combine_step<const vectorize:bool>(input:&mut [Imag],factor:&[Imag]){
     
     let (even_slice,odd_slice) = input.split_at_mut(n/2);
 
-    let mut even_real_addrs = Simd::splat(((&mut even_slice[0].real) as *mut f64) as usize) + stride_vector; 
-    let mut even_imag_addrs = Simd::splat(((&mut even_slice[0].imag) as *mut f64) as usize) + stride_vector; 
-    let mut odd_real_addrs = Simd::splat(((&mut odd_slice[0].real) as *mut f64) as usize) + stride_vector; 
-    let mut odd_imag_addrs = Simd::splat(((&mut odd_slice[0].imag) as *mut f64) as usize) + stride_vector; 
-    let mut factor_real_addrs = Simd::splat(((&mut factor[0].real) as *mut f64) as usize) + stride_vector; 
-    let mut factor_imag_addrs = Simd::splat(((&mut factor[0].imag) as *mut f64) as usize) + stride_vector; 
+    let mut even_real_addrs = Simd::splat((&mut even_slice[0].real) as *mut f64); 
+    let mut even_imag_addrs = Simd::splat((&mut even_slice[0].imag) as *mut f64); 
+    let mut odd_real_addrs = Simd::splat((&mut odd_slice[0].real) as *mut f64); 
+    let mut odd_imag_addrs = Simd::splat((&mut odd_slice[0].imag) as *mut f64); 
+    let mut factor_real_addrs = Simd::splat((&factor[0].real) as *const f64); 
+    let mut factor_imag_addrs = Simd::splat((&factor[0].imag) as *const f64); 
+
+    even_real_addrs = even_real_addrs.with_addr(even_real_addrs.addr()+stride_vector);
+    even_imag_addrs = even_imag_addrs.with_addr(even_imag_addrs.addr()+stride_vector);
     
+    odd_real_addrs = odd_real_addrs.with_addr(odd_real_addrs.addr()+stride_vector);
+    odd_imag_addrs = odd_imag_addrs.with_addr(odd_imag_addrs.addr()+stride_vector);
+
+    factor_real_addrs = factor_real_addrs.with_addr(factor_real_addrs.addr()+stride_vector);
+    factor_imag_addrs = factor_imag_addrs.with_addr(factor_imag_addrs.addr()+stride_vector);
+
 
     let stride_vector:std::simd::Simd<usize,4> = std::simd::Simd::splat(4*stride_length);
 
     for block in 0..blocks{
-        let simd_even_real = <Simd<*const f64,4> as SimdConstPtr>::from_exposed_addr(even_real_addrs);
-        let simd_even_imag = <Simd<*const f64,4> as SimdConstPtr>::from_exposed_addr(even_imag_addrs);
-        let simd_odd_real = <Simd<*const f64,4> as SimdConstPtr>::from_exposed_addr(odd_real_addrs);
-        let simd_odd_imag = <Simd<*const f64,4> as SimdConstPtr>::from_exposed_addr(odd_imag_addrs);
-        let simd_factor_real = <Simd<*const f64,4> as SimdConstPtr>::from_exposed_addr(factor_real_addrs);
-        let simd_factor_imag = <Simd<*const f64,4> as SimdConstPtr>::from_exposed_addr(factor_imag_addrs);
-        
-        
-        let even_real = unsafe{std::simd::f64x4::gather_ptr(simd_even_real )};
-        let even_imag = unsafe{std::simd::f64x4::gather_ptr(simd_even_imag )};  
+                
+        let even_real = unsafe{std::simd::f64x4::gather_ptr(even_real_addrs.cast_const() )};
+        let even_imag = unsafe{std::simd::f64x4::gather_ptr(even_imag_addrs.cast_const() )};  
 
-        let odd_real = unsafe{std::simd::f64x4::gather_ptr(simd_odd_real )};
-        let odd_imag = unsafe{std::simd::f64x4::gather_ptr(simd_odd_imag )}; 
-        //println!("{:?}",odd_real);
+        let odd_real = unsafe{std::simd::f64x4::gather_ptr(odd_real_addrs.cast_const() )};
+        let odd_imag = unsafe{std::simd::f64x4::gather_ptr(odd_imag_addrs.cast_const() )}; 
+        //println!("even {:?}",even_imag);
+        //println!("odd {:?}",odd_imag);
         
-        let factor_real = unsafe{std::simd::f64x4::gather_ptr(simd_factor_real )};
-        let factor_imag = unsafe{std::simd::f64x4::gather_ptr(simd_factor_imag )};
+        let factor_real = unsafe{std::simd::f64x4::gather_ptr(factor_real_addrs)};
+        let factor_imag = unsafe{std::simd::f64x4::gather_ptr(factor_imag_addrs)};
         
 
         let tmp_real = (odd_real * factor_real) - (odd_imag * factor_imag);
@@ -90,26 +93,23 @@ fn combine_step<const vectorize:bool>(input:&mut [Imag],factor:&[Imag]){
         let tmp_odd_imag = even_imag - tmp_imag;
 
 
-
-        let simd_even_real = <Simd<*mut f64,4> as SimdMutPtr>::from_exposed_addr(even_real_addrs);
-        let simd_even_imag = <Simd<*mut f64,4> as SimdMutPtr>::from_exposed_addr(even_imag_addrs);
-        let simd_odd_real = <Simd<*mut f64,4> as SimdMutPtr>::from_exposed_addr(odd_real_addrs);
-        let simd_odd_imag = <Simd<*mut f64,4> as SimdMutPtr>::from_exposed_addr(odd_imag_addrs);
- 
-
-        unsafe{tmp_even_real.scatter_ptr(simd_even_real)};
-        unsafe{tmp_even_imag.scatter_ptr(simd_even_imag)};
+        unsafe{tmp_even_real.scatter_ptr(even_real_addrs)};
+        unsafe{tmp_even_imag.scatter_ptr(even_imag_addrs)};
 
 
-        unsafe{tmp_odd_real.scatter_ptr(simd_odd_real)};
-        unsafe{tmp_odd_imag.scatter_ptr(simd_odd_imag)};
+        unsafe{tmp_odd_real.scatter_ptr(odd_real_addrs)};
+        unsafe{tmp_odd_imag.scatter_ptr(odd_imag_addrs)};
 
-        even_real_addrs += stride_vector;
-        even_imag_addrs += stride_vector;
-        odd_real_addrs += stride_vector;
-        odd_imag_addrs += stride_vector;
-        factor_real_addrs += stride_vector;
-        factor_imag_addrs += stride_vector;
+        even_real_addrs = even_real_addrs.with_addr(even_real_addrs.addr()+stride_vector);
+        even_imag_addrs = even_imag_addrs.with_addr(even_imag_addrs.addr()+stride_vector);
+        
+        odd_real_addrs = odd_real_addrs.with_addr(odd_real_addrs.addr()+stride_vector);
+        odd_imag_addrs = odd_imag_addrs.with_addr(odd_imag_addrs.addr()+stride_vector);
+
+        factor_real_addrs = factor_real_addrs.with_addr(factor_real_addrs.addr()+stride_vector);
+        factor_imag_addrs = factor_imag_addrs.with_addr(factor_imag_addrs.addr()+stride_vector);
+
+
     }
 
 
@@ -150,7 +150,7 @@ fn fft_internal(input:&mut [Imag],factor:&mut [Imag]){
             *change = Imag::euler((i as f64)*tmp);
         }
         for i in input.chunks_exact_mut(len){
-            combine_step::<true>(i, &factor[0..len/2])
+            combine_step::<false>(i, &factor[0..len/2])
         }
         len *= 2;
     }  
@@ -176,7 +176,7 @@ where Imag:From<T>,T:Copy{
 }
 
 fn main() { 
-    /* 
+    /*  
     let mut tmp = [Imag{real:1.0,imag:1.0},
                           Imag{real:2.0,imag:2.0},
                           Imag{real:3.0,imag:3.0},
@@ -230,14 +230,14 @@ fn main() {
     return;
    */ 
     
-    /*let file = std::fs::File::open("../tmp.data").unwrap();
+    let file = std::fs::File::open("../tmp.data").unwrap();
     let bufreader = std::io::BufReader::new(file);
     let data:Vec<i64> = bufreader.lines().map(|x|x.unwrap().parse::<i64>().unwrap()).collect();
     
     let time = std::time::Instant::now(); 
     let _result = black_box(fft(&data));
     println!("{}",(time.elapsed().as_micros() as f64)/1000000.0);
-   */ 
+    
     
     let tmp = [-9.0,4.0,-5.0,7.0,-2.0,3.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0];
     let tmp2 = [1.0,3.0,-5.0,2.0,6.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0];
