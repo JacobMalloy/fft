@@ -30,75 +30,33 @@ fn split_even_and_odd(input:&mut [Imag]){
 
 }
 #[inline(never)]
-fn combine_step<const vectorize:bool>(input:&mut [Imag],factor:&[Imag]){
+fn combine_step<const VECTORIZE:bool>(input:&mut [Imag],factor:&[Imag]){
     let n = input.len();
-    let blocks = if vectorize{n/8}else{0};
-    let mut even_real_addrs = [0 as *mut f64,0 as *mut f64,0 as *mut f64,0 as *mut f64];
-    let stride_length=if n > 1{
-            let ptr1: *const f64 = &input[0].imag;
-            let ptr2: *const f64 = &input[1].imag;
-            (ptr2 as usize) - (ptr1 as usize)
-        }else {
-            0
-        };
-    let strides_array = [0,stride_length,2*stride_length,3*stride_length];
-    let stride_vector = std::simd::Simd::from_array(strides_array);
-    
+    let blocks = if VECTORIZE{n/8}else{0};
 
     //let factor_mul = factor.len()/(n/2);
+    if blocks > 0{
+
+        let stride_length=if n > 1{
+                let ptr1: *const f64 = &input[0].imag;
+                let ptr2: *const f64 = &input[1].imag;
+                (ptr2 as usize) - (ptr1 as usize)
+            }else {
+                0
+            };
+        let strides_array = [0,stride_length,2*stride_length,3*stride_length];
+        let stride_vector = std::simd::Simd::from_array(strides_array);
     
-    let (even_slice,odd_slice) = input.split_at_mut(n/2);
 
-    let mut even_real_addrs = Simd::splat((&mut even_slice[0].real) as *mut f64); 
-    let mut even_imag_addrs = Simd::splat((&mut even_slice[0].imag) as *mut f64); 
-    let mut odd_real_addrs = Simd::splat((&mut odd_slice[0].real) as *mut f64); 
-    let mut odd_imag_addrs = Simd::splat((&mut odd_slice[0].imag) as *mut f64); 
-    let mut factor_real_addrs = Simd::splat((&factor[0].real) as *const f64); 
-    let mut factor_imag_addrs = Simd::splat((&factor[0].imag) as *const f64); 
-
-    even_real_addrs = even_real_addrs.with_addr(even_real_addrs.addr()+stride_vector);
-    even_imag_addrs = even_imag_addrs.with_addr(even_imag_addrs.addr()+stride_vector);
     
-    odd_real_addrs = odd_real_addrs.with_addr(odd_real_addrs.addr()+stride_vector);
-    odd_imag_addrs = odd_imag_addrs.with_addr(odd_imag_addrs.addr()+stride_vector);
+        let (even_slice,odd_slice) = input.split_at_mut(n/2);
 
-    factor_real_addrs = factor_real_addrs.with_addr(factor_real_addrs.addr()+stride_vector);
-    factor_imag_addrs = factor_imag_addrs.with_addr(factor_imag_addrs.addr()+stride_vector);
-
-
-    let stride_vector:std::simd::Simd<usize,4> = std::simd::Simd::splat(4*stride_length);
-
-    for block in 0..blocks{
-                
-        let even_real = unsafe{std::simd::f64x4::gather_ptr(even_real_addrs.cast_const() )};
-        let even_imag = unsafe{std::simd::f64x4::gather_ptr(even_imag_addrs.cast_const() )};  
-
-        let odd_real = unsafe{std::simd::f64x4::gather_ptr(odd_real_addrs.cast_const() )};
-        let odd_imag = unsafe{std::simd::f64x4::gather_ptr(odd_imag_addrs.cast_const() )}; 
-        //println!("even {:?}",even_imag);
-        //println!("odd {:?}",odd_imag);
-        
-        let factor_real = unsafe{std::simd::f64x4::gather_ptr(factor_real_addrs)};
-        let factor_imag = unsafe{std::simd::f64x4::gather_ptr(factor_imag_addrs)};
-        
-
-        let tmp_real = (odd_real * factor_real) - (odd_imag * factor_imag);
-        let tmp_imag = (odd_real * factor_imag) + (odd_imag * factor_real);
-
-        //println!("tmp imag {:?}",tmp_imag);
-        let tmp_even_real = even_real + tmp_real;
-        let tmp_even_imag = even_imag + tmp_imag;
-
-        let tmp_odd_real = even_real - tmp_real;
-        let tmp_odd_imag = even_imag - tmp_imag;
-
-
-        unsafe{tmp_even_real.scatter_ptr(even_real_addrs)};
-        unsafe{tmp_even_imag.scatter_ptr(even_imag_addrs)};
-
-
-        unsafe{tmp_odd_real.scatter_ptr(odd_real_addrs)};
-        unsafe{tmp_odd_imag.scatter_ptr(odd_imag_addrs)};
+        let mut even_real_addrs = Simd::splat((&mut even_slice[0].real) as *mut f64); 
+        let mut even_imag_addrs = Simd::splat((&mut even_slice[0].imag) as *mut f64); 
+        let mut odd_real_addrs = Simd::splat((&mut odd_slice[0].real) as *mut f64); 
+        let mut odd_imag_addrs = Simd::splat((&mut odd_slice[0].imag) as *mut f64); 
+        let mut factor_real_addrs = Simd::splat((&factor[0].real) as *const f64); 
+        let mut factor_imag_addrs = Simd::splat((&factor[0].imag) as *const f64); 
 
         even_real_addrs = even_real_addrs.with_addr(even_real_addrs.addr()+stride_vector);
         even_imag_addrs = even_imag_addrs.with_addr(even_imag_addrs.addr()+stride_vector);
@@ -110,8 +68,52 @@ fn combine_step<const vectorize:bool>(input:&mut [Imag],factor:&[Imag]){
         factor_imag_addrs = factor_imag_addrs.with_addr(factor_imag_addrs.addr()+stride_vector);
 
 
-    }
+        let stride_vector:std::simd::Simd<usize,4> = std::simd::Simd::splat(4*stride_length);
 
+        for _ in 0..blocks{
+                    
+            let even_real = unsafe{std::simd::f64x4::gather_ptr(even_real_addrs.cast_const() )};
+            let even_imag = unsafe{std::simd::f64x4::gather_ptr(even_imag_addrs.cast_const() )};  
+
+            let odd_real = unsafe{std::simd::f64x4::gather_ptr(odd_real_addrs.cast_const() )};
+            let odd_imag = unsafe{std::simd::f64x4::gather_ptr(odd_imag_addrs.cast_const() )}; 
+            //println!("even {:?}",even_imag);
+            //println!("odd {:?}",odd_imag);
+            
+            let factor_real = unsafe{std::simd::f64x4::gather_ptr(factor_real_addrs)};
+            let factor_imag = unsafe{std::simd::f64x4::gather_ptr(factor_imag_addrs)};
+            
+
+            let tmp_real = (odd_real * factor_real) - (odd_imag * factor_imag);
+            let tmp_imag = (odd_real * factor_imag) + (odd_imag * factor_real);
+
+            //println!("tmp imag {:?}",tmp_imag);
+            let tmp_even_real = even_real + tmp_real;
+            let tmp_even_imag = even_imag + tmp_imag;
+
+            let tmp_odd_real = even_real - tmp_real;
+            let tmp_odd_imag = even_imag - tmp_imag;
+
+
+            unsafe{tmp_even_real.scatter_ptr(even_real_addrs)};
+            unsafe{tmp_even_imag.scatter_ptr(even_imag_addrs)};
+
+
+            unsafe{tmp_odd_real.scatter_ptr(odd_real_addrs)};
+            unsafe{tmp_odd_imag.scatter_ptr(odd_imag_addrs)};
+
+            even_real_addrs = even_real_addrs.with_addr(even_real_addrs.addr()+stride_vector);
+            even_imag_addrs = even_imag_addrs.with_addr(even_imag_addrs.addr()+stride_vector);
+            
+            odd_real_addrs = odd_real_addrs.with_addr(odd_real_addrs.addr()+stride_vector);
+            odd_imag_addrs = odd_imag_addrs.with_addr(odd_imag_addrs.addr()+stride_vector);
+
+            factor_real_addrs = factor_real_addrs.with_addr(factor_real_addrs.addr()+stride_vector);
+            factor_imag_addrs = factor_imag_addrs.with_addr(factor_imag_addrs.addr()+stride_vector);
+
+
+        }
+    }
 
     let s = input.split_at_mut(n/2);
     let even_iter = s.0.iter_mut(); 
@@ -150,7 +152,7 @@ fn fft_internal(input:&mut [Imag],factor:&mut [Imag]){
             *change = Imag::euler((i as f64)*tmp);
         }
         for i in input.chunks_exact_mut(len){
-            combine_step::<false>(i, &factor[0..len/2])
+            combine_step::<true>(i, &factor[0..len/2])
         }
         len *= 2;
     }  
