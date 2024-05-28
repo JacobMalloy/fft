@@ -1,5 +1,5 @@
 [package]
-name = "fft"
+name = "tester"
 version = "0.1.0"
 edition = "2021"
 
@@ -7,3 +7,9 @@ edition = "2021"
 
 [dependencies]
 imaginary = {path = "../imaginary"}
+fft = {path = "../fft"}
+
+
+[profile.release-with-debug]
+inherits = "release"
+debug = true
