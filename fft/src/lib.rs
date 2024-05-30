@@ -43,6 +43,8 @@ where
 fn split_even_and_odd(input: &mut [Imag]) {
     let n = input.len();
 
+    assert!(n%2==0);
+
     let even: Vec<Imag> = input
         .iter()
         .step_by(2)
