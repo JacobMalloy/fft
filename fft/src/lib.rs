@@ -40,22 +40,24 @@ where
         .collect()
 }
 
-fn split_even_and_odd(input: &mut [Imag]) {
+fn split_even_and_odd<T>(input: &mut [T]) 
+where T:Copy
+{
     let n = input.len();
 
     assert!(n%2==0);
 
-    let even: Vec<Imag> = input
+    let even: Vec<T> = input
         .iter()
         .step_by(2)
         .copied()
-        .collect::<Vec<Imag>>();
-    let odd: Vec<Imag> = input
+        .collect::<Vec<T>>();
+    let odd: Vec<T> = input
         .iter()
         .skip(1)
         .step_by(2)
         .copied()
-        .collect::<Vec<Imag>>();
+        .collect::<Vec<T>>();
 
     input[0..n / 2].copy_from_slice(&even);
     input[n / 2..n].copy_from_slice(&odd);
@@ -160,4 +162,18 @@ where
 
 
 
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn split_even_and_odd_test() {
+        let mut input = [0,1,2,3,4,5,6,7];
+        let correct = [0,2,4,6,1,3,5,7];
+        split_even_and_odd(&mut input);
+        println!("{:?}",input);
+        assert!(input.iter().zip(correct.iter()).all(|(x,y)|x==y));
+    }
+}
 
