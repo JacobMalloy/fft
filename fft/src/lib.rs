@@ -1,10 +1,10 @@
 use imaginary::imaginary::Imag;
 use core::f64::consts::PI;
+use std::iter;
 
-#[allow(dead_code)]
-pub fn dft<'a, T>(input: &'a [T]) -> Vec<Imag>
+pub fn dft<'a, T>(input: &'a [T]) -> Box<[Imag]>
 where
-    T: std::ops::Mul<Imag, Output = Imag> + Copy,
+    T: core::ops::Mul<Imag, Output = Imag> + Copy,
 {
     let len = input.len();
     (0..len)
@@ -19,8 +19,7 @@ where
         .collect()
 }
 
-#[allow(dead_code)]
-pub fn idft<'a, T>(input: &'a [T]) -> Vec<Imag>
+pub fn idft<'a, T>(input: &'a [T]) -> Box<[Imag]>
 where
     T: std::ops::Mul<Imag, Output = Imag> + Copy,
 {
@@ -40,27 +39,26 @@ where
         .collect()
 }
 
-fn split_even_and_odd<T>(input: &mut [T]) 
+fn split_even_and_odd<T>(input: &mut [T],tmp_array:&mut [T]) 
 where T:Copy
 {
     let n = input.len();
 
     assert!(n%2==0);
 
-    let even: Vec<T> = input
-        .iter()
-        .step_by(2)
-        .copied()
-        .collect::<Vec<T>>();
-    let odd: Vec<T> = input
-        .iter()
-        .skip(1)
-        .step_by(2)
-        .copied()
-        .collect::<Vec<T>>();
+    assert!(input.len()<=tmp_array.len());
 
-    input[0..n / 2].copy_from_slice(&even);
-    input[n / 2..n].copy_from_slice(&odd);
+    let tmp_its = tmp_array[0..n].split_at_mut(n/2);
+
+    let tmp = tmp_its.0.iter_mut().zip(tmp_its.1.iter_mut());
+
+    let tmp2 = input.chunks_exact(2);
+
+    for ((even_dst,odd_dst),chunk) in tmp.zip(tmp2){
+        *even_dst = chunk[0];
+        *odd_dst = chunk[1];
+    } 
+    input.copy_from_slice(&tmp_array[0..n]);
 }
 
 fn combine_step(input: &mut [Imag], factor: &[Imag]) {
@@ -76,7 +74,7 @@ fn combine_step(input: &mut [Imag], factor: &[Imag]) {
     }
 }
 
-fn fft_internal<const MUL_CONST: isize,T>(input: &[T]) -> Vec<Imag>
+fn fft_internal<const MUL_CONST: isize,T>(input: &[T]) -> Box<[Imag]>
 where
     Imag: From<T>,
     T: Copy,
@@ -88,17 +86,16 @@ where
     assert!((new_n >> 1) < n);
     assert!(new_n.count_ones() == 1);
 
-    let mut return_vec: Vec<Imag> = input.iter().copied().map(|x| Imag::from(x)).collect();
-    return_vec.extend(
-        std::iter::repeat(Imag {
-            real: 0.0,
-            imag: 0.0,
-        })
-        .take(new_n - n),
-    );
+    let extend_iter = std::iter::repeat(Imag::default()).take(new_n-n);
+
+    let mut return_vec: Box<[Imag]> = input.iter()
+                                           .copied()
+                                           .map(|x| Imag::from(x))
+                                           .chain(extend_iter)
+                                           .collect();
 
 
-    let mut factor: Vec<Imag> = std::iter::repeat(Imag {
+    let mut factor: Box<[Imag]> = std::iter::repeat(Imag {
         real: 1.0,
         imag: 0.0,
     })
@@ -110,9 +107,10 @@ where
     assert!(return_vec.len().count_ones() == 1);
 
     let mut len = new_n;
+    let mut tmp_array :Box<[Imag]> = iter::repeat(Imag::default()).take(len).collect(); 
     while len > 1 {
         for i in return_vec.chunks_exact_mut(len) {
-            split_even_and_odd(i);
+            split_even_and_odd(i,&mut tmp_array);
         }
         len /= 2;
     }
@@ -137,7 +135,7 @@ where
     return return_vec;
 }
 
-pub fn fft<T>(input: &[T]) -> Vec<Imag>
+pub fn fft<T>(input: &[T]) -> Box<[Imag]>
 where
     Imag: From<T>,
     T: Copy,
@@ -146,7 +144,7 @@ where
     return return_val;
 }
 
-pub fn ifft<T>(input: &[T]) -> Vec<Imag>
+pub fn ifft<T>(input: &[T]) -> Box<[Imag]>
 where
     Imag: From<T>,
     T: Copy,
@@ -170,8 +168,9 @@ mod tests {
     #[test]
     fn split_even_and_odd_test() {
         let mut input = [0,1,2,3,4,5,6,7];
+        let mut tmp = [0,0,0,0,0,0,0,0];
         let correct = [0,2,4,6,1,3,5,7];
-        split_even_and_odd(&mut input);
+        split_even_and_odd(&mut input,&mut tmp);
         println!("{:?}",input);
         assert!(input.iter().zip(correct.iter()).all(|(x,y)|x==y));
     }

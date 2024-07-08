@@ -4,9 +4,10 @@ use std::{hint::black_box, io::BufRead};
 
 
 fn main() {
-    let file = std::fs::File::open("../tmp.data").unwrap();
+    let path = std::env::args().nth(1).unwrap_or(String::from("../tmp.data"));
+    let file = std::fs::File::open(path).unwrap();
     let bufreader = std::io::BufReader::new(file);
-    let data: Vec<i64> = bufreader
+    let data: Box<[i64]> = bufreader
         .lines()
         .map(|x| x.unwrap().parse::<i64>().unwrap())
         .collect();
@@ -32,13 +33,13 @@ fn main() {
     }
 
     println!("");*/
-    let tmp3: Vec<Imag> = a.iter().zip(b.iter()).map(|(a, b)| a * b).collect();
+    let tmp3: Box<[Imag]> = a.iter().zip(b.iter()).map(|(a, b)| a * b).collect();
     /*for i in tmp3.iter(){
         println!("{}",i)
     }
     */
     println!("");
-    let tmp4: Vec<Imag> = ifft(&tmp3);
+    let tmp4: Box<[Imag]> = ifft(&tmp3);
     for i in tmp4.iter() {
         println!("{}", i)
     }

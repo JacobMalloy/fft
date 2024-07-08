@@ -18,6 +18,15 @@ impl Imag {
     }
 }
 
+impl Default for Imag{
+    fn default() -> Self {
+       Imag{
+        real:0.0,
+        imag:0.0
+       } 
+    }
+}
+
 impl<T> Sum<T> for Imag
 where
     Imag: Add<T, Output = Imag>,
