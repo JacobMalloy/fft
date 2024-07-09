@@ -44,9 +44,9 @@ where T:Copy
 {
     let n = input.len();
 
-    assert!(n%2==0);
+    debug_assert!(n%2==0);
 
-    assert!(input.len()<=tmp_array.len());
+    debug_assert!(input.len()<=tmp_array.len());
 
     let tmp_its = tmp_array[0..n].split_at_mut(n/2);
 
@@ -82,9 +82,9 @@ where
     let n = input.len();
     let new_n: usize = (1 as usize) << (usize::BITS - ((n - 1).leading_zeros()));
 
-    assert!(new_n >= n);
-    assert!((new_n >> 1) < n);
-    assert!(new_n.count_ones() == 1);
+    debug_assert!(new_n >= n);
+    debug_assert!((new_n >> 1) < n);
+    debug_assert!(new_n.count_ones() == 1);
 
     let extend_iter = std::iter::repeat(Imag::default()).take(new_n-n);
 
@@ -102,7 +102,7 @@ where
 
     
 
-    assert!(return_vec.len().count_ones() == 1);
+    debug_assert!(return_vec.len().count_ones() == 1);
 
     let mut len = new_n;
     let mut tmp_array :Box<[Imag]> = iter::repeat(Imag::default()).take(len).collect(); 
