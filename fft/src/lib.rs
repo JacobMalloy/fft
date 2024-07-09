@@ -95,12 +95,10 @@ where
                                            .collect();
 
 
-    let mut factor: Box<[Imag]> = std::iter::repeat(Imag {
-        real: 1.0,
-        imag: 0.0,
-    })
+    let mut factor: Box<[Imag]> = std::iter::repeat(Imag::default())
     .take(new_n / 2)
     .collect();
+    factor[0] = Imag{real:1.0,imag:0.0};
 
     
 
