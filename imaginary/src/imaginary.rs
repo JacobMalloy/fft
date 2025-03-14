@@ -18,12 +18,12 @@ impl Imag {
     }
 }
 
-impl Default for Imag{
+impl Default for Imag {
     fn default() -> Self {
-       Imag{
-        real:0.0,
-        imag:0.0
-       } 
+        Imag {
+            real: 0.0,
+            imag: 0.0,
+        }
     }
 }
 
@@ -132,5 +132,11 @@ impl std::fmt::Display for Imag {
         } else {
             write!(f, "{:.3}+{:.3}i", self.real, self.imag)
         }
+    }
+}
+
+impl std::fmt::Debug for Imag {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "{}", self)
     }
 }
